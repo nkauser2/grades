@@ -5,6 +5,7 @@ Usage: python grades.py scores.txt
 
 import math
 import sys
+from decimal import ROUND_HALF_UP, Decimal
 
 NOT_FOUND = "Error: Not Found"
 CONTENT_NOT_FOUND = "Content Not Found"
@@ -46,15 +47,67 @@ def read_scores(path):
     return scores
 
 
+def highest(scores):
+    return max(scores)
+
+
+def lowest(scores):
+    return min(scores)
+
+
+def two_places(value):
+    """Round to two decimal places, halves rounding up (78.125 -> 78.13)."""
+    return Decimal(repr(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def average(scores):
+    """Return the average as a Decimal rounded to two decimal places."""
+    total = sum(Decimal(repr(score)) for score in scores)
+    return (total / len(scores)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+# Lowest average needed for each letter, checked from the top down.
+GRADE_CUTOFFS = [(90, "A"), (80, "B"), (70, "C"), (60, "D")]
+
+
+def letter_grade(avg):
+    """Letter for an average: A 90-100, B 80-89, C 70-79, D 60-69, F 0-59."""
+    for cutoff, letter in GRADE_CUTOFFS:
+        if avg >= cutoff:
+            return letter
+    return "F"
+
+
+def format_score(score):
+    """Show a score the way it was entered: 90 not 90.0, 85.5 as 85.5."""
+    return str(int(score)) if score.is_integer() else repr(score)
+
+
+def scores_row(scores):
+    return ", ".join(format_score(score) for score in scores)
+
+
+def build_report(scores):
+    avg = average(scores)
+    return "\n".join([
+        f"Highest: {two_places(highest(scores))}",
+        f"Lowest: {two_places(lowest(scores))}",
+        f"Average: {avg}",
+        f"Letter grade: {letter_grade(avg)}",
+        f"Scores: {scores_row(scores)}",
+    ])
+
+
 def main(argv):
     if len(argv) != 1:
         print(USAGE)
         return 2
     try:
-        read_scores(argv[0])
+        scores = read_scores(argv[0])
     except ScoreError as err:
         print(err)
         return 1
+    print(build_report(scores))
     return 0
 
 
